@@ -3,15 +3,15 @@
 """
 ISPComparisonVisualizationTool
 
-这个ToolProvide了一个交互式的界Surface，用于ComparisonTraditionalISP和AdaptiveISP的Effect。
-用户可以：
-1. LoadImage进RowReal-timeComparison
-2. AdjustmentTraditionalISPParameter观察Effect变化
-3. 查看AdaptiveISP的自动调优Process
-4. AnalyzePerformance指标和DetectionResult
-5. GenerateDetailed的ComparisonReport
+This tool provides an interactive interface for comparing traditional ISP and AdaptiveISP effects.
+Users can:
+1. Load images for real-time comparison
+2. Adjust traditional ISP parameters to observe effect changes
+3. View AdaptiveISP's automatic tuning process
+4. Analyze performance metrics and detection results
+5. Generate detailed comparison reports
 
-作者：基于AdaptiveISP论文Implementation
+Author: Based on AdaptiveISP paper implementation
 """
 
 import os
@@ -29,7 +29,7 @@ import json
 import time
 from typing import Dict, List, Tuple, Any
 
-# 导入我们的模块
+# Import our modules
 from isp_pipeline_demo import (
     ISPPipeline, ExposureModule, GammaModule, WhiteBalanceModule,
     DenoiseModule, SharpenModule, ContrastModule, SaturationModule,
@@ -42,17 +42,17 @@ class ISPComparisonTool:
     
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("AI驱动的ISP调优ComparisonTool")
+        self.root.title("AI-driven ISP Tuning Comparison Tool")
         self.root.geometry("1400x900")
         
-        # Data存储
+        # Data storage
         self.original_image = None
         self.baseline_result = None
         self.adaptive_result = None
         self.baseline_pipeline = None
         self.adaptive_pipeline = None
         
-        # Performance指标
+        # Performance metrics
         self.performance_metrics = {
             'baseline_score': 0.0,
             'adaptive_score': 0.0,
@@ -60,18 +60,18 @@ class ISPComparisonTool:
             'applied_filters': []
         }
         
-        # Create界Surface
+        # Create interface
         self._create_widgets()
         self._setup_pipelines()
     
     def _create_widgets(self):
-        """Create用户界Surface"""
-        # 主Framework
+        """Create user interface"""
+        # Main framework
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # LeftControlSurface板
-        control_frame = ttk.LabelFrame(main_frame, text="ControlSurface板", width=300)
+        # Left control panel
+        control_frame = ttk.LabelFrame(main_frame, text="Control panel", width=300)
         control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
         control_frame.pack_propagate(False)
         
@@ -95,9 +95,9 @@ class ISPComparisonTool:
         image_frame = ttk.LabelFrame(main_frame, text="ImageComparison")
         image_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         
-        # CreateImageDisplay标签
+        # Create image display labels
         self.image_labels = {}
-        for i, (title, key) in enumerate([("原始Image", "original"), 
+        for i, (title, key) in enumerate([("Original image", "original"), 
                                         ("TraditionalISP", "baseline"), 
                                         ("AdaptiveISP", "adaptive")]):
             frame = ttk.Frame(image_frame)
@@ -105,20 +105,20 @@ class ISPComparisonTool:
             
             ttk.Label(frame, text=title, font=("Arial", 12, "bold")).pack()
             
-            label = tk.Label(frame, text="无Image", width=30, height=20, 
+            label = tk.Label(frame, text="No image", width=30, height=20, 
                            bg="lightgray", relief="sunken")
             label.pack(padx=5, pady=5)
             self.image_labels[key] = label
         
-        # Configuration网格权重
+        # Configure grid weights
         image_frame.grid_columnconfigure(0, weight=1)
         image_frame.grid_columnconfigure(1, weight=1)
         image_frame.grid_columnconfigure(2, weight=1)
         image_frame.grid_rowconfigure(0, weight=1)
         
-        # BottomStatus栏
+        # Bottom status bar
         self.status_var = tk.StringVar()
-        self.status_var.set("就绪")
+        self.status_var.set("Ready")
         status_bar = ttk.Label(main_frame, textvariable=self.status_var, relief="sunken")
         status_bar.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 0))
     
@@ -207,10 +207,10 @@ class ISPComparisonTool:
         slider.pack(side=tk.RIGHT, fill=tk.X, expand=True)
         self.baseline_sliders['sharpen'] = slider
         
-        # Comparison度
+        # Contrast
         contrast_frame = ttk.Frame(baseline_frame)
         contrast_frame.pack(fill=tk.X, pady=2)
-        ttk.Label(contrast_frame, text="Comparison度:").pack(side=tk.LEFT)
+        ttk.Label(contrast_frame, text="Contrast:").pack(side=tk.LEFT)
         self.baseline_vars['contrast'] = tk.DoubleVar(value=0.1)
         slider = tk.Scale(contrast_frame, from_=-0.5, to=0.5, resolution=0.1,
                          orient=tk.HORIZONTAL, variable=self.baseline_vars['contrast'],
@@ -236,19 +236,19 @@ class ISPComparisonTool:
         
         ttk.Button(adaptive_frame, text="RunAdaptiveISP", 
                   command=self._run_adaptive_isp).pack(fill=tk.X, pady=2)
-        ttk.Button(adaptive_frame, text="重置Parameter", 
+        ttk.Button(adaptive_frame, text="Reset parameters", 
                   command=self._reset_adaptive_params).pack(fill=tk.X, pady=2)
         
-        # DisplayApplication的滤波器
+        # Display applied filters
         self.filter_display = tk.Text(adaptive_frame, height=6, width=30)
         self.filter_display.pack(fill=tk.X, pady=2)
     
     def _create_performance_display(self, parent):
-        """CreatePerformanceDisplay"""
-        perf_frame = ttk.LabelFrame(parent, text="Performance指标")
+        """Create performance display"""
+        perf_frame = ttk.LabelFrame(parent, text="Performance metrics")
         perf_frame.pack(fill=tk.X, pady=5)
         
-        # Detection分数
+        # Detection score
         self.score_frame = ttk.Frame(perf_frame)
         self.score_frame.pack(fill=tk.X, pady=2)
         
@@ -274,11 +274,11 @@ class ISPComparisonTool:
                  font=("Arial", 10, "bold")).pack(pady=2)
         
         # SaveResult按钮
-        ttk.Button(perf_frame, text="SaveComparisonResult", 
+        ttk.Button(perf_frame, text="Save comparison result", 
                   command=self._save_results).pack(fill=tk.X, pady=2)
     
     def _setup_pipelines(self):
-        """SettingsISP流水Line"""
+        """Setup ISP pipeline"""
         self.baseline_pipeline = create_baseline_pipeline()
         self.adaptive_pipeline = create_adaptive_pipeline()
     
@@ -296,14 +296,14 @@ class ISPComparisonTool:
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 self.original_image = image.astype(np.float32) / 255.0
                 
-                # Display原始Image
+                # DisplayOriginal image
                 self._display_image(self.original_image, "original")
                 
-                # 自动Handle
+                # Automatic processing
                 self._update_baseline()
                 self._run_adaptive_isp()
                 
-                self.status_var.set(f"已LoadImage: {os.path.basename(file_path)}")
+                self.status_var.set(f"Image loaded: {os.path.basename(file_path)}")
                 
             except Exception as e:
                 messagebox.showerror("Error", f"LoadImageFailed: {str(e)}")
@@ -314,12 +314,12 @@ class ISPComparisonTool:
         height, width = 400, 400
         image = np.zeros((height, width, 3), dtype=np.float32)
         
-        # Add渐变背景
+        # Add gradient background
         for i in range(height):
             for j in range(width):
                 image[i, j] = [i/height, j/width, (i+j)/(height+width)]
         
-        # Add几何形状
+        # Add geometric shapes
         cv2.rectangle(image, (50, 50), (150, 150), (1, 0, 0), -1)
         cv2.circle(image, (300, 100), 50, (0, 1, 0), -1)
         cv2.ellipse(image, (200, 300), (80, 40), 45, 0, 360, (0, 0, 1), -1)
@@ -331,11 +331,11 @@ class ISPComparisonTool:
         self.original_image = image
         self._display_image(self.original_image, "original")
         
-        # 自动Handle
+        # Automatic processing
         self._update_baseline()
         self._run_adaptive_isp()
         
-        self.status_var.set("已LoadTestImage")
+        self.status_var.set("Test image loaded")
     
     def _display_image(self, image, key):
         """DisplayImage"""
@@ -346,13 +346,13 @@ class ISPComparisonTool:
         display_size = (200, 200)
         image_display = cv2.resize(image, display_size)
         
-        # Transform为PILImage
+        # Convert to PIL image
         image_pil = Image.fromarray((image_display * 255).astype(np.uint8))
         image_tk = ImageTk.PhotoImage(image_pil)
         
-        # Update标签
+        # Update label
         self.image_labels[key].configure(image=image_tk, text="")
-        self.image_labels[key].image = image_tk  # 保持Reference
+        self.image_labels[key].image = image_tk  # Keep reference
     
     def _update_baseline(self, *args):
         """UpdateTraditionalISPResult"""
@@ -360,7 +360,7 @@ class ISPComparisonTool:
             return
         
         try:
-            # Update流水LineParameter
+            # Update pipeline parameters
             self.baseline_pipeline.modules[0].parameters['exposure'] = self.baseline_vars['exposure'].get()
             self.baseline_pipeline.modules[2].parameters['gamma'] = self.baseline_vars['gamma'].get()
             
@@ -384,7 +384,7 @@ class ISPComparisonTool:
             # DisplayResult
             self._display_image(self.baseline_result, "baseline")
             
-            # CalculatePerformance指标
+            # CalculatePerformance metrics
             baseline_score = self._calculate_detection_score(self.baseline_result)
             self.performance_metrics['baseline_score'] = baseline_score
             self.performance_metrics['processing_times']['baseline'] = processing_time
@@ -404,20 +404,20 @@ class ISPComparisonTool:
             return
         
         try:
-            # 模拟AdaptiveISP的ParameterOptimizeProcess
+            # Simulate AdaptiveISP parameter optimization process
             applied_filters = []
             
-            # 根据Image特征自动AdjustmentParameter
-            # 这里UseSimplified的启发式Method，实际Application中会UseDepthLearnModel
+            # Automatically adjust parameters based on image features
+            # Here we use simplified heuristic methods, in actual applications deep learning models would be used
             
-            # AnalyzeImage特征
+            # Analyze image features
             gray = cv2.cvtColor((self.original_image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
             brightness = np.mean(gray) / 255.0
             contrast = np.std(gray) / 255.0
             noise_level = self._estimate_noise_level(gray)
             
-            # 根据特征AdjustmentParameter
-            if brightness < 0.3:  # Low LightImage
+            # Adjust parameters based on features
+            if brightness < 0.3:  # Low light image
                 exposure = 0.5
                 gamma = 1.8
                 denoise = 0.7
@@ -426,7 +426,7 @@ class ISPComparisonTool:
                 applied_filters.append("Gamma Correction")
                 applied_filters.append("Denoising")
                 applied_filters.append("Sharpening")
-            elif brightness > 0.7:  # 高光Image
+            elif brightness > 0.7:  # High light image
                 exposure = -0.3
                 gamma = 2.5
                 denoise = 0.3
@@ -445,23 +445,23 @@ class ISPComparisonTool:
                 applied_filters.append("Denoising")
                 applied_filters.append("Sharpening")
             
-            # 根据Comparison度Adjustment
+            # 根据ContrastAdjustment
             if contrast < 0.15:
                 contrast_adj = 0.2
                 saturation = 1.3
-                applied_filters.append("Comparison度Enhancement")
-                applied_filters.append("SaturationEnhancement")
+                applied_filters.append("ContrastEnhancement")
+                applied_filters.append("Saturation enhancement")
             else:
                 contrast_adj = 0.0
                 saturation = 1.1
                 applied_filters.append("SaturationFine-tuning")
             
-            # 根据NoiseHorizontalAdjustment
+            # Adjust based on noise level
             if noise_level > 0.05:
                 denoise = max(denoise, 0.6)
-                applied_filters.append("强化Denoising")
+                applied_filters.append("Enhanced denoising")
             
-            # UpdateAdaptive流水LineParameter
+            # Update adaptive pipeline parameters
             self.adaptive_pipeline.modules[0].parameters['exposure'] = exposure
             self.adaptive_pipeline.modules[1].parameters['gamma'] = gamma
             self.adaptive_pipeline.modules[4].parameters['strength'] = denoise
@@ -477,7 +477,7 @@ class ISPComparisonTool:
             # DisplayResult
             self._display_image(self.adaptive_result, "adaptive")
             
-            # CalculatePerformance指标
+            # CalculatePerformance metrics
             adaptive_score = self._calculate_detection_score(self.adaptive_result)
             self.performance_metrics['adaptive_score'] = adaptive_score
             self.performance_metrics['processing_times']['adaptive'] = processing_time
@@ -487,8 +487,8 @@ class ISPComparisonTool:
             self.adaptive_score_var.set(f"AdaptiveISP: {adaptive_score:.3f}")
             self.adaptive_time_var.set(f"AdaptiveISPTime: {processing_time:.3f}s")
             
-            # Update滤波器Display
-            filter_text = "Application的滤波器:\n" + "\n".join(applied_filters)
+            # Update filter display
+            filter_text = "Applied filters:\n" + "\n".join(applied_filters)
             self.filter_display.delete(1.0, tk.END)
             self.filter_display.insert(1.0, filter_text)
             
@@ -500,29 +500,29 @@ class ISPComparisonTool:
             self.status_var.set(f"AdaptiveISPHandleFailed: {str(e)}")
     
     def _estimate_noise_level(self, image):
-        """估计ImageNoiseHorizontal"""
-        # Use拉普拉斯算子估计Noise
+        """Estimate image noise level"""
+        # Use Laplacian operator to estimate noise
         laplacian = cv2.Laplacian(image, cv2.CV_64F)
         noise_level = np.std(laplacian) / 255.0
         return noise_level
     
     def _calculate_detection_score(self, image):
-        """CalculateDetection分数（模拟）"""
-        # Simplified的Detection质量Evaluate
+        """CalculateDetection score（模拟）"""
+        # Simplified detection quality evaluation
         gray = cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
         
-        # Edge密度
+        # Edge density
         edges = cv2.Canny(gray, 50, 150)
         edge_density = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
         
-        # Comparison度
+        # Contrast
         contrast = np.std(gray) / 255.0
         
-        # 亮度分布
+        # Brightness distribution
         brightness = np.mean(gray) / 255.0
         brightness_score = 1.0 - abs(brightness - 0.5) * 2  # 接近0.5最好
         
-        # 综合评分
+        # Comprehensive score
         detection_score = (edge_density * 0.4 + contrast * 0.3 + brightness_score * 0.3) * 0.8
         
         return min(max(detection_score, 0.0), 1.0)
@@ -539,8 +539,8 @@ class ISPComparisonTool:
             self.improvement_var.set("PerformanceEnhance: --")
     
     def _reset_adaptive_params(self):
-        """重置AdaptiveParameter"""
-        # 重置Adaptive流水LineParameter
+        """Reset adaptive parameters"""
+        # Reset adaptive pipeline parameters
         for module in self.adaptive_pipeline.modules:
             if hasattr(module, 'parameters'):
                 if 'exposure' in module.parameters:
@@ -554,12 +554,12 @@ class ISPComparisonTool:
                 if 'saturation' in module.parameters:
                     module.parameters['saturation'] = 1.0
         
-        self.status_var.set("AdaptiveParameter已重置")
+        self.status_var.set("Adaptive parameters reset")
     
     def _save_results(self):
-        """SaveComparisonResult"""
+        """Save comparison result"""
         if self.original_image is None:
-            messagebox.showwarning("Warning", "没有Image可Save")
+            messagebox.showwarning("Warning", "No image to save")
             return
         
         # SelectSaveDirectory
@@ -571,19 +571,19 @@ class ISPComparisonTool:
             # SaveImage
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             
-            # CreateComparison图
+            # Create comparison chart
             fig, axes = plt.subplots(1, 3, figsize=(15, 5))
             
             axes[0].imshow(self.original_image)
-            axes[0].set_title('原始Image')
+            axes[0].set_title('Original image')
             axes[0].axis('off')
             
             axes[1].imshow(self.baseline_result)
-            axes[1].set_title(f'TraditionalISP (分数: {self.performance_metrics["baseline_score"]:.3f})')
+            axes[1].set_title(f'TraditionalISP (Score: {self.performance_metrics["baseline_score"]:.3f})')
             axes[1].axis('off')
             
             axes[2].imshow(self.adaptive_result)
-            axes[2].set_title(f'AdaptiveISP (分数: {self.performance_metrics["adaptive_score"]:.3f})')
+            axes[2].set_title(f'AdaptiveISP (Score: {self.performance_metrics["adaptive_score"]:.3f})')
             axes[2].axis('off')
             
             plt.tight_layout()
@@ -606,8 +606,8 @@ class ISPComparisonTool:
             with open(os.path.join(save_dir, f'performance_data_{timestamp}.json'), 'w') as f:
                 json.dump(performance_data, f, indent=2)
             
-            messagebox.showinfo("Success", f"Result已Save到: {save_dir}")
-            self.status_var.set(f"Result已Save到: {save_dir}")
+            messagebox.showinfo("Success", f"Result saved to: {save_dir}")
+            self.status_var.set(f"Result saved to: {save_dir}")
             
         except Exception as e:
             messagebox.showerror("Error", f"SaveFailed: {str(e)}")
@@ -618,11 +618,12 @@ class ISPComparisonTool:
 
 
 def main():
-    """主Function"""
-    print("启动ISPComparisonVisualizationTool...")
+    """Main function"""
+    print("Starting ISP comparison visualization tool...")
     app = ISPComparisonTool()
     app.run()
 
 
 if __name__ == "__main__":
     main()
+
