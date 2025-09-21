@@ -1,0 +1,4 @@
+venv/
+.DS_Store
+results/
+quick_start_results/
