@@ -510,7 +510,7 @@ class AdaptiveISPDemo:
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        # Save滤波器Parameter
+        # Save filter parameters
         filter_params = {
             'applied_filters': applied_filters,
             'baseline_score': baseline_score,

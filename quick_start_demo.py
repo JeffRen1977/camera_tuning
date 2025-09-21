@@ -65,7 +65,7 @@ def create_test_scenarios():
 
 
 def create_normal_light_scene():
-    """CreateNormal LightingTestScene"""
+    """CreateNormal LightingTest scene"""
     height, width = 400, 400
     image = np.ones((height, width, 3), dtype=np.float32) * 0.5
     
@@ -82,7 +82,7 @@ def create_normal_light_scene():
 
 
 def create_low_light_scene():
-    """CreateLow LightTestScene"""
+    """CreateLow LightTest scene"""
     image = create_normal_light_scene()
     # Decrease overall brightness
     image = image * 0.3
@@ -97,7 +97,7 @@ def create_high_contrast_scene():
     height, width = 400, 400
     image = np.zeros((height, width, 3), dtype=np.float32)
     
-    # Create高Comparison度的棋盘Mode
+    # Create high contrast checkerboard pattern
     block_size = 40
     for i in range(0, height, block_size):
         for j in range(0, width, block_size):
@@ -106,7 +106,7 @@ def create_high_contrast_scene():
             else:
                 image[i:i+block_size, j:j+block_size] = [0.1, 0.1, 0.1]
     
-    # Add一些彩色Element
+    # Add some colored elements
     cv2.circle(image, (100, 100), 30, (1, 0, 0), -1)
     cv2.circle(image, (300, 100), 30, (0, 1, 0), -1)
     cv2.circle(image, (200, 300), 30, (0, 0, 1), -1)
@@ -115,50 +115,50 @@ def create_high_contrast_scene():
 
 
 def create_noisy_scene():
-    """CreateNoiseTestScene"""
+    """CreateNoiseTest scene"""
     image = create_normal_light_scene()
-    # Add大量Noise
+    # Add heavy noise
     noise = np.random.normal(0, 0.1, image.shape)
     image = np.clip(image + noise, 0, 1)
     return image
 
 
 def calculate_detection_score(image):
-    """CalculateDetection分数（SimplifiedVersion）"""
+    """Calculate detection score (simplified version)"""
     gray = cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
     
-    # Edge密度
+    # Edge density
     edges = cv2.Canny(gray, 50, 150)
     edge_density = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
     
-    # Comparison度
+    # Contrast
     contrast = np.std(gray) / 255.0
     
-    # 亮度分布
+    # Brightness distribution
     brightness = np.mean(gray) / 255.0
     brightness_score = 1.0 - abs(brightness - 0.5) * 2
     
-    # 综合评分
+    # Comprehensive score
     detection_score = (edge_density * 0.4 + contrast * 0.3 + brightness_score * 0.3) * 0.8
     
     return min(max(detection_score, 0.0), 1.0)
 
 
 def simulate_adaptive_isp(image):
-    """模拟AdaptiveISPHandle"""
-    # AnalyzeImage特征
+    """Simulate AdaptiveISP processing"""
+    # Analyze image features
     gray = cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
     brightness = np.mean(gray) / 255.0
     contrast = np.std(gray) / 255.0
     
-    # 根据特征AdjustmentParameter
+    # Adjust parameters based on features
     if brightness < 0.3:  # Low Light
         exposure = 0.5
         gamma = 1.8
         denoise = 0.7
         sharpen = 0.6
         applied_filters = ["ExposureEnhancement", "Gamma Correction", "Denoising", "Sharpening"]
-    elif brightness > 0.7:  # 高光
+    elif brightness > 0.7:  # High light
         exposure = -0.3
         gamma = 2.5
         denoise = 0.3
@@ -171,17 +171,17 @@ def simulate_adaptive_isp(image):
         sharpen = 0.5
         applied_filters = ["LightExposureAdjustment", "Gamma Correction", "Denoising", "Sharpening"]
     
-    # 根据Comparison度Adjustment
+    # Adjust based on contrast
     if contrast < 0.15:
         contrast_adj = 0.2
         saturation = 1.3
-        applied_filters.extend(["Comparison度Enhancement", "SaturationEnhancement"])
+        applied_filters.extend(["ContrastEnhancement", "Saturation enhancement"])
     else:
         contrast_adj = 0.0
         saturation = 1.1
         applied_filters.append("SaturationFine-tuning")
     
-    # CreateAdaptive流水Line
+    # Create adaptive pipeline
     pipeline = create_adaptive_pipeline()
     
     # ApplicationParameter
@@ -208,7 +208,7 @@ def run_demo():
     output_dir = "quick_start_results"
     os.makedirs(output_dir, exist_ok=True)
     
-    # CreateTestScene
+    # CreateTest scene
     print("\n1. Creating test scenarios...")
     scenarios = create_test_scenarios()
     print(f"   Created {len(scenarios)} test scenarios")
@@ -236,11 +236,11 @@ def run_demo():
         adaptive_result, applied_filters = simulate_adaptive_isp(original_image)
         adaptive_time = time.time() - start_time
         
-        # CalculateDetection分数
+        # Calculate detection score
         baseline_score = calculate_detection_score(baseline_result)
         adaptive_score = calculate_detection_score(adaptive_result)
         
-        # CalculatePerformanceEnhance
+        # CalculatePerformance improvement
         improvement = (adaptive_score - baseline_score) / baseline_score * 100
         
         print(f"     Traditional ISP score: {baseline_score:.3f}, Time: {baseline_time:.3f}s")
@@ -301,19 +301,19 @@ def create_comparison_visualization(all_results, output_dir):
         axes = axes.reshape(1, -1)
     
     for i, (scenario_name, result) in enumerate(all_results.items()):
-        # 原始Image
+        # Original image
         axes[i, 0].imshow(result['original'])
-        axes[i, 0].set_title(f'{scenario_name}\n原始Image')
+        axes[i, 0].set_title(f'{scenario_name}\nOriginal image')
         axes[i, 0].axis('off')
         
         # TraditionalISPResult
         axes[i, 1].imshow(result['baseline'])
-        axes[i, 1].set_title(f'TraditionalISP\n分数: {result["baseline_score"]:.3f}')
+        axes[i, 1].set_title(f'TraditionalISP\nScore: {result["baseline_score"]:.3f}')
         axes[i, 1].axis('off')
         
         # AdaptiveISPResult
         axes[i, 2].imshow(result['adaptive'])
-        axes[i, 2].set_title(f'AdaptiveISP\n分数: {result["adaptive_score"]:.3f} ({result["improvement"]:+.1f}%)')
+        axes[i, 2].set_title(f'AdaptiveISP\nScore: {result["adaptive_score"]:.3f} ({result["improvement"]:+.1f}%)')
         axes[i, 2].axis('off')
     
     plt.tight_layout()
@@ -321,7 +321,7 @@ def create_comparison_visualization(all_results, output_dir):
                dpi=300, bbox_inches='tight')
     plt.close()
     
-    # CreatePerformanceComparison图
+    # Create performance comparison chart
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
     
     scenario_names = list(all_results.keys())
@@ -329,25 +329,25 @@ def create_comparison_visualization(all_results, output_dir):
     adaptive_scores = [all_results[name]['adaptive_score'] for name in scenario_names]
     improvements = [all_results[name]['improvement'] for name in scenario_names]
     
-    # Detection分数Comparison
+    # DetectionScoreComparison
     x = range(len(scenario_names))
     width = 0.35
     ax1.bar([i - width/2 for i in x], baseline_scores, width, label='TraditionalISP', alpha=0.8)
     ax1.bar([i + width/2 for i in x], adaptive_scores, width, label='AdaptiveISP', alpha=0.8)
-    ax1.set_xlabel('TestScene')
-    ax1.set_ylabel('Detection分数')
-    ax1.set_title('DetectionPerformanceComparison')
+    ax1.set_xlabel('Test scene')
+    ax1.set_ylabel('DetectionScore')
+    ax1.set_title('Detection performance comparison')
     ax1.set_xticks(x)
     ax1.set_xticklabels(scenario_names, rotation=45)
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
-    # PerformanceEnhance
+    # Performance improvement
     colors = ['green' if imp > 0 else 'red' for imp in improvements]
     ax2.bar(scenario_names, improvements, color=colors, alpha=0.7)
-    ax2.set_xlabel('TestScene')
-    ax2.set_ylabel('PerformanceEnhance (%)')
-    ax2.set_title('PerformanceEnhanceComparison')
+    ax2.set_xlabel('Test scene')
+    ax2.set_ylabel('Performance improvement (%)')
+    ax2.set_title('Performance improvementComparison')
     ax2.tick_params(axis='x', rotation=45)
     ax2.grid(True, alpha=0.3)
     ax2.axhline(y=0, color='black', linestyle='-', alpha=0.5)
@@ -359,43 +359,43 @@ def create_comparison_visualization(all_results, output_dir):
 
 
 def generate_summary_report(all_results, output_dir):
-    """Generate摘要Report"""
+    """Generate summary report"""
     report_path = os.path.join(output_dir, 'summary_report.txt')
     
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write("=" * 60 + "\n")
-        f.write("AI驱动ISP调优DemonstrationReport\n")
+        f.write("AI-driven ISP tuning demonstration report\n")
         f.write("=" * 60 + "\n\n")
         
         f.write(f"DemonstrationTime: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"TestSceneNumber: {len(all_results)}\n\n")
+        f.write(f"Test sceneNumber: {len(all_results)}\n\n")
         
         f.write("DetailedResult:\n")
         f.write("-" * 40 + "\n")
         
         for scenario_name, result in all_results.items():
             f.write(f"\nScene: {scenario_name}\n")
-            f.write(f"  TraditionalISP分数: {result['baseline_score']:.4f}\n")
-            f.write(f"  AdaptiveISP分数: {result['adaptive_score']:.4f}\n")
-            f.write(f"  PerformanceEnhance: {result['improvement']:+.2f}%\n")
-            f.write(f"  HandleTime: {result['baseline_time']:.3f}s -> {result['adaptive_time']:.3f}s\n")
-            f.write(f"  Application滤波器: {', '.join(result['applied_filters'])}\n")
+            f.write(f"  TraditionalISPScore: {result['baseline_score']:.4f}\n")
+            f.write(f"  AdaptiveISPScore: {result['adaptive_score']:.4f}\n")
+            f.write(f"  Performance improvement: {result['improvement']:+.2f}%\n")
+            f.write(f"  Processing time: {result['baseline_time']:.3f}s -> {result['adaptive_time']:.3f}s\n")
+            f.write(f"  Applied filters: {', '.join(result['applied_filters'])}\n")
         
-        # Statistics摘要
+        # Statistical summary
         improvements = [result['improvement'] for result in all_results.values()]
         baseline_scores = [result['baseline_score'] for result in all_results.values()]
         adaptive_scores = [result['adaptive_score'] for result in all_results.values()]
         
-        f.write(f"\nStatistics摘要:\n")
+        f.write(f"\nStatistical summary:\n")
         f.write("-" * 40 + "\n")
-        f.write(f"AveragePerformanceEnhance: {np.mean(improvements):.2f}%\n")
-        f.write(f"MaximumPerformanceEnhance: {np.max(improvements):.2f}%\n")
-        f.write(f"MinimumPerformanceEnhance: {np.min(improvements):.2f}%\n")
-        f.write(f"PerformanceEnhanceStandard差: {np.std(improvements):.2f}%\n")
-        f.write(f"AverageTraditionalISP分数: {np.mean(baseline_scores):.4f}\n")
-        f.write(f"AverageAdaptiveISP分数: {np.mean(adaptive_scores):.4f}\n")
+        f.write(f"AveragePerformance improvement: {np.mean(improvements):.2f}%\n")
+        f.write(f"MaximumPerformance improvement: {np.max(improvements):.2f}%\n")
+        f.write(f"MinimumPerformance improvement: {np.min(improvements):.2f}%\n")
+        f.write(f"Performance improvement standard deviation: {np.std(improvements):.2f}%\n")
+        f.write(f"AverageTraditionalISPScore: {np.mean(baseline_scores):.4f}\n")
+        f.write(f"AverageAdaptiveISPScore: {np.mean(adaptive_scores):.4f}\n")
         
-        # 滤波器UseStatistics
+        # Filter usage statistics
         all_filters = []
         for result in all_results.values():
             all_filters.extend(result['applied_filters'])
@@ -403,16 +403,16 @@ def generate_summary_report(all_results, output_dir):
         from collections import Counter
         filter_counts = Counter(all_filters)
         
-        f.write(f"\n滤波器UseStatistics:\n")
+        f.write(f"\nFilter usage statistics:\n")
         f.write("-" * 40 + "\n")
         for filter_name, count in filter_counts.most_common():
-            f.write(f"  {filter_name}: {count} 次 ({count/len(all_filters)*100:.1f}%)\n")
+            f.write(f"  {filter_name}: {count} times ({count/len(all_filters)*100:.1f}%)\n")
         
-        f.write(f"\n结论:\n")
+        f.write(f"\nConclusion:\n")
         f.write("-" * 40 + "\n")
-        f.write("这个Demonstration展示了AI驱动的ISP调优相比Traditional固定ParameterMethod\n")
-        f.write("在DetectionPerformance上的显著Enhance。AdaptiveISP能够根据Image特征\n")
-        f.write("自动Select最优的HandleParameter，Implementation任务导向的ImageOptimize。\n")
+        f.write("This demonstration shows AI-driven ISP tuning compared to traditional fixed parameter methods\n")
+        f.write("in detection performance. AdaptiveISP can automatically select optimal processing parameters based on image features\n")
+        f.write("to achieve task-oriented image optimization.\n")
         
         f.write("\n" + "=" * 60 + "\n")
         f.write("ReportGenerateCompleted\n")

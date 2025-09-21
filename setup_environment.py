@@ -23,7 +23,7 @@ from pathlib import Path
 
 
 class EnvironmentSetup:
-    """虚拟EnvironmentSettingsClass"""
+    """Virtual Environment Settings Class"""
     
     def __init__(self):
         self.project_root = Path(__file__).parent
@@ -35,64 +35,64 @@ class EnvironmentSetup:
         """CheckPythonVersion"""
         print("CheckPythonVersion...")
         if sys.version_info < (3, 8):
-            print("❌ Error: NeedPython 3.8或更高Version")
-            print(f"当前Version: {sys.version}")
+            print("❌ Error: Python 3.8 or higher required")
+            print(f"Current version: {sys.version}")
             return False
         
-        print(f"✅ PythonVersionCheck通过: {sys.version}")
+        print(f"✅ Python version check passed: {sys.version}")
         return True
     
     def create_virtual_environment(self):
-        """Create虚拟Environment"""
-        print("\nCreate虚拟Environment...")
+        """Create virtual environment"""
+        print("\nCreate virtual environment...")
         
         if self.venv_path.exists():
-            print(f"⚠️  虚拟Environment已存在: {self.venv_path}")
-            response = input("是否RestartCreate? (y/N): ").lower()
+            print(f"⚠️  Virtual environment already exists: {self.venv_path}")
+            response = input("Recreate? (y/N): ").lower()
             if response == 'y':
-                print("Delete现有虚拟Environment...")
+                print("Delete existing virtual environment...")
                 import shutil
                 shutil.rmtree(self.venv_path)
             else:
-                print("Use现有虚拟Environment")
+                print("Use existing virtual environment")
                 return True
         
         try:
-            # Create虚拟Environment
+            # Create virtual environment
             cmd = [sys.executable, "-m", "venv", str(self.venv_path)]
             result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-            print(f"✅ 虚拟EnvironmentCreateSuccess: {self.venv_path}")
+            print(f"✅ Virtual environment created successfully: {self.venv_path}")
             return True
             
         except subprocess.CalledProcessError as e:
-            print(f"❌ Create虚拟EnvironmentFailed: {e}")
-            print(f"ErrorOutput: {e.stderr}")
+            print(f"❌ Create virtual environment failed: {e}")
+            print(f"Error output: {e.stderr}")
             return False
     
     def get_pip_path(self):
-        """Get虚拟Environment中的pipPath"""
+        """Get pip path in virtual environment"""
         if self.is_windows:
             return self.venv_path / "Scripts" / "pip.exe"
         else:
             return self.venv_path / "bin" / "pip"
     
     def get_python_path(self):
-        """Get虚拟Environment中的pythonPath"""
+        """Get python path in virtual environment"""
         if self.is_windows:
             return self.venv_path / "Scripts" / "python.exe"
         else:
             return self.venv_path / "bin" / "python"
     
     def install_dependencies(self):
-        """InstallDependency包"""
-        print("\nInstallDependency包...")
+        """Install dependency packages"""
+        print("\nInstall dependency packages...")
         
         pip_path = self.get_pip_path()
         if not pip_path.exists():
-            print(f"❌ pip未找到: {pip_path}")
+            print(f"❌ pip not found: {pip_path}")
             return False
         
-        # 定义Dependency包List
+        # Define dependency package list
         dependencies = [
             "torch>=1.9.0",
             "torchvision>=0.10.0",
@@ -107,16 +107,16 @@ class EnvironmentSetup:
             "easydict>=1.9.0",
         ]
         
-        print("InstallCoreDependency包...")
+        print("Install core dependency packages...")
         for dep in dependencies:
             print(f"  Install {dep}...")
             try:
                 cmd = [str(pip_path), "install", dep]
                 result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-                print(f"  ✅ {dep} InstallSuccess")
+                print(f"  ✅ {dep} Installation successful")
             except subprocess.CalledProcessError as e:
-                print(f"  ❌ {dep} InstallFailed: {e}")
-                print(f"  ErrorOutput: {e.stderr}")
+                print(f"  ❌ {dep} Installation failed: {e}")
+                print(f"  Error output: {e.stderr}")
                 return False
         
         # InstallOptionalDependency
@@ -126,17 +126,17 @@ class EnvironmentSetup:
             "jupyter>=1.0.0",
         ]
         
-        print("\nInstallOptionalDependency包...")
+        print("\nInstall optional dependency packages...")
         for dep in optional_dependencies:
             print(f"  Install {dep}...")
             try:
                 cmd = [str(pip_path), "install", dep]
                 result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-                print(f"  ✅ {dep} InstallSuccess")
+                print(f"  ✅ {dep} Installation successful")
             except subprocess.CalledProcessError as e:
-                print(f"  ⚠️  {dep} InstallFailed，Skip")
+                print(f"  ⚠️  {dep} Installation failed，Skipping")
         
-        print("✅ Dependency包InstallCompleted")
+        print("✅ Dependency package installation completed")
         return True
     
     def create_requirements_file(self):
@@ -436,8 +436,8 @@ camera_tuning/
         
         steps = [
             ("CheckPythonVersion", self.check_python_version),
-            ("Create虚拟Environment", self.create_virtual_environment),
-            ("InstallDependency包", self.install_dependencies),
+            ("Create virtual environment", self.create_virtual_environment),
+            ("Install dependency packages", self.install_dependencies),
             ("Createrequirements.txt", self.create_requirements_file),
             ("Create激活Script", self.create_activation_scripts),
             ("CreateRunScript", self.create_run_scripts),
