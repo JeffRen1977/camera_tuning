@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ISPPerformanceEvaluate和VisualizationAnalyzeTool
+ISP Performance Evaluation and Visualization Analysis Tool
 
-这个ToolProvide了全Surface的ISPPerformanceEvaluateFeature，包括：
-1. 多种Image质量指标的自动Calculate
-2. DetectionPerformance的量化Evaluate
-3. HandleTime的PerformanceAnalyze
-4. Parameter调优Effect的StatisticsAnalyze
-5. GenerateDetailed的PerformanceReport和Visualization图Table
+This tool provides comprehensive ISP performance evaluation features, including:
+1. Automatic calculation of multiple image quality metrics
+2. Quantitative evaluation of detection performance
+3. Performance analysis of processing time
+4. Statistical analysis of parameter tuning effects
+5. Generate detailed performance reports and visualization charts
 
-作者：基于AdaptiveISP论文Implementation
+Author: Based on AdaptiveISP paper implementation
 """
 
 import os
@@ -30,7 +30,7 @@ import argparse
 
 @dataclass
 class ImageQualityMetrics:
-    """Image质量指标"""
+    """Image quality metrics"""
     psnr: float = 0.0
     ssim: float = 0.0
     mse: float = 0.0
@@ -44,7 +44,7 @@ class ImageQualityMetrics:
 
 @dataclass
 class DetectionMetrics:
-    """DetectionPerformance指标"""
+    """Detection performance metrics"""
     detection_score: float = 0.0
     confidence_scores: List[float] = None
     detection_count: int = 0
@@ -54,7 +54,7 @@ class DetectionMetrics:
 
 @dataclass
 class PerformanceMetrics:
-    """综合Performance指标"""
+    """Comprehensive performance metrics"""
     processing_time: float = 0.0
     memory_usage: float = 0.0
     cpu_usage: float = 0.0
@@ -73,11 +73,11 @@ class ISPAnalysisResult:
 
 
 class ImageQualityAnalyzer:
-    """Image质量Analyze器"""
+    """Image quality analyzer"""
     
     @staticmethod
     def calculate_psnr(image1: np.ndarray, image2: np.ndarray) -> float:
-        """CalculatePSNR（峰Value信噪比）"""
+        """Calculate PSNR (peak signal-to-noise ratio)"""
         mse = np.mean((image1 - image2) ** 2)
         if mse == 0:
             return float('inf')
@@ -85,8 +85,8 @@ class ImageQualityAnalyzer:
     
     @staticmethod
     def calculate_ssim(image1: np.ndarray, image2: np.ndarray) -> float:
-        """CalculateSSIM（Structure相似性）"""
-        # Simplified的SSIMCalculate
+        """Calculate SSIM (structural similarity)"""
+        # Simplified SSIM calculation
         mu1 = np.mean(image1)
         mu2 = np.mean(image2)
         sigma1 = np.var(image1)
@@ -103,45 +103,45 @@ class ImageQualityAnalyzer:
     
     @staticmethod
     def calculate_edge_density(image: np.ndarray) -> float:
-        """CalculateEdge密度"""
+        """Calculate edge density"""
         gray = cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
         edges = cv2.Canny(gray, 50, 150)
         return np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
     
     @staticmethod
     def calculate_contrast(image: np.ndarray) -> float:
-        """CalculateComparison度"""
+        """Calculate contrast"""
         gray = cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
         return np.std(gray) / 255.0
     
     @staticmethod
     def calculate_brightness(image: np.ndarray) -> float:
-        """Calculate亮度"""
+        """Calculate brightness"""
         gray = cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
         return np.mean(gray) / 255.0
     
     @staticmethod
     def estimate_noise_level(image: np.ndarray) -> float:
-        """估计NoiseHorizontal"""
+        """Estimate noise level"""
         gray = cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
         laplacian = cv2.Laplacian(gray, cv2.CV_64F)
         return np.std(laplacian) / 255.0
     
     @staticmethod
     def calculate_sharpness(image: np.ndarray) -> float:
-        """Calculate锐度"""
+        """Calculate sharpness"""
         gray = cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
         laplacian = cv2.Laplacian(gray, cv2.CV_64F)
         return np.var(laplacian) / 255.0
     
     @staticmethod
     def calculate_color_variance(image: np.ndarray) -> float:
-        """Calculate颜色方差"""
+        """Calculate color variance"""
         return np.var(image, axis=(0, 1)).mean()
     
     @classmethod
     def analyze_image(cls, image: np.ndarray, reference: np.ndarray = None) -> ImageQualityMetrics:
-        """综合AnalyzeImage质量"""
+        """Comprehensive image quality analysis"""
         metrics = ImageQualityMetrics()
         
         metrics.edge_density = cls.calculate_edge_density(image)
@@ -160,33 +160,33 @@ class ImageQualityAnalyzer:
 
 
 class DetectionAnalyzer:
-    """DetectionPerformanceAnalyze器"""
+    """Detection performance analyzer"""
     
     @staticmethod
     def simulate_detection(image: np.ndarray) -> DetectionMetrics:
-        """模拟目标Detection（如果没有真实DetectionModel）"""
+        """Simulate object detection (if no real detection model available)"""
         gray = cv2.cvtColor((image * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY)
         
-        # UseEdgeDetection模拟目标Detection
+        # Use edge detection to simulate object detection
         edges = cv2.Canny(gray, 50, 150)
         
-        # Find轮廓
+        # Find contours
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        # Filter小轮廓
+        # Filter small contours
         min_area = 100
         valid_contours = [c for c in contours if cv2.contourArea(c) > min_area]
         
-        # CalculateDetection分数
+        # Calculate detection score
         edge_density = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
         contrast = np.std(gray) / 255.0
         brightness = np.mean(gray) / 255.0
         
-        # 综合评分
+        # Comprehensive score
         detection_score = (edge_density * 0.4 + contrast * 0.3 + 
                           (1.0 - abs(brightness - 0.5) * 2) * 0.3) * 0.8
         
-        # 模拟置信度分数
+        # Simulate confidence scores
         confidence_scores = [0.8 + np.random.normal(0, 0.1) for _ in range(len(valid_contours))]
         confidence_scores = [max(0.0, min(1.0, score)) for score in confidence_scores]
         
@@ -200,13 +200,13 @@ class DetectionAnalyzer:
     
     @staticmethod
     def run_yolo_detection(image: np.ndarray, yolo_model=None) -> DetectionMetrics:
-        """RunYOLODetection（如果有Model）"""
+        """Run YOLO detection (if model available)"""
         if yolo_model is None:
             return DetectionAnalyzer.simulate_detection(image)
         
         try:
-            # 这里应该调用实际的YOLOModel
-            # 为了Demonstration，我们Use模拟Detection
+            # Here should call the actual YOLO model
+            # For demonstration, we use simulated detection
             return DetectionAnalyzer.simulate_detection(image)
         except Exception as e:
             print(f"YOLODetectionFailed: {e}")
@@ -214,11 +214,11 @@ class DetectionAnalyzer:
 
 
 class PerformanceAnalyzer:
-    """PerformanceAnalyze器"""
+    """Performance analyzer"""
     
     @staticmethod
     def measure_processing_time(func, *args, **kwargs) -> Tuple[Any, float]:
-        """测量HandleTime"""
+        """Measure processing time"""
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
@@ -226,12 +226,12 @@ class PerformanceAnalyzer:
     
     @staticmethod
     def estimate_memory_usage(image: np.ndarray) -> float:
-        """估计内存Use量（MB）"""
+        """Estimate memory usage (MB)"""
         return image.nbytes / (1024 * 1024)
 
 
 class ISPAnalyzer:
-    """ISPAnalyze器主Class"""
+    """ISP analyzer main class"""
     
     def __init__(self):
         self.results: List[ISPAnalysisResult] = []
@@ -243,18 +243,18 @@ class ISPAnalyzer:
                           processed_image: np.ndarray,
                           applied_filters: List[str],
                           parameters: Dict[str, Any]) -> ISPAnalysisResult:
-        """AnalyzeSingleISPHandleResult"""
+        """Analyze single ISP processing result"""
         
-        # Image质量Analyze
+        # Image quality analysis
         image_quality = self.image_quality_analyzer.analyze_image(
             processed_image, original_image
         )
         
-        # DetectionPerformanceAnalyze
+        # Detection performance analysis
         detection = self.detection_analyzer.simulate_detection(processed_image)
         
-        # PerformanceAnalyze
-        processing_time = 0.0  # 在实际Application中从External传入
+        # Performance analysis
+        processing_time = 0.0  # In actual application, passed from external source
         memory_usage = self.performance_analyzer.estimate_memory_usage(processed_image)
         
         performance = PerformanceMetrics(
@@ -276,7 +276,7 @@ class ISPAnalyzer:
     
     def compare_results(self, baseline_result: ISPAnalysisResult, 
                        adaptive_result: ISPAnalysisResult) -> Dict[str, Any]:
-        """比较两个ISPResult"""
+        """Compare two ISP results"""
         comparison = {
             'detection_score_improvement': (
                 adaptive_result.detection.detection_score - 
@@ -317,14 +317,14 @@ class ISPAnalyzer:
         return comparison
     
     def generate_performance_report(self, output_dir: str = "performance_report"):
-        """GeneratePerformanceReport"""
+        """Generate performance report"""
         if not self.results:
-            print("没有AnalyzeResult可GenerateReport")
+            print("No analysis results to generate report")
             return
         
         os.makedirs(output_dir, exist_ok=True)
         
-        # CreateData框
+        # Create dataframe
         data = []
         for result in self.results:
             row = {
@@ -346,37 +346,37 @@ class ISPAnalyzer:
         
         df = pd.DataFrame(data)
         
-        # GenerateStatistics摘要
+        # Generate statistical summary
         summary = df.describe()
         
-        # SaveData
+        # Save data
         df.to_csv(os.path.join(output_dir, 'performance_data.csv'), index=False)
         summary.to_csv(os.path.join(output_dir, 'performance_summary.csv'))
         
-        # GenerateVisualizationReport
+        # Generate visualization report
         self._create_performance_plots(df, output_dir)
         
-        # GenerateTextReport
+        # Generate text report
         self._create_text_report(df, summary, output_dir)
         
-        print(f"PerformanceReport已Generate到: {output_dir}")
+        print(f"Performance report generated to: {output_dir}")
     
     def _create_performance_plots(self, df: pd.DataFrame, output_dir: str):
-        """CreatePerformance图Table"""
+        """Create performance charts"""
         plt.style.use('seaborn-v0_8')
         
-        # 1. Detection分数分布
+        # 1. Detection score distribution
         plt.figure(figsize=(10, 6))
         plt.hist(df['detection_score'], bins=20, alpha=0.7, color='skyblue', edgecolor='black')
-        plt.xlabel('Detection分数')
-        plt.ylabel('频次')
-        plt.title('Detection分数分布')
+        plt.xlabel('Detection Score')
+        plt.ylabel('Frequency')
+        plt.title('Detection score distribution')
         plt.grid(True, alpha=0.3)
         plt.savefig(os.path.join(output_dir, 'detection_score_distribution.png'), 
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        # 2. Image质量指标Comparison
+        # 2. Image quality metrics comparison
         quality_metrics = ['edge_density', 'contrast', 'brightness', 'sharpness', 'color_variance']
         
         fig, axes = plt.subplots(2, 3, figsize=(15, 10))
@@ -386,11 +386,11 @@ class ISPAnalyzer:
             if i < len(axes):
                 axes[i].hist(df[metric], bins=15, alpha=0.7, color='lightgreen', edgecolor='black')
                 axes[i].set_xlabel(metric.replace('_', ' ').title())
-                axes[i].set_ylabel('频次')
-                axes[i].set_title(f'{metric.replace("_", " ").title()} 分布')
+                axes[i].set_ylabel('Frequency')
+                axes[i].set_title(f'{metric.replace("_", " ").title()} Distribution')
                 axes[i].grid(True, alpha=0.3)
         
-        # 隐藏多余的子图
+        # Hide extra subplots
         for i in range(len(quality_metrics), len(axes)):
             axes[i].set_visible(False)
         
@@ -399,41 +399,41 @@ class ISPAnalyzer:
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        # 3. 相关性热力图
+        # 3. Correlation heatmap
         correlation_matrix = df[['detection_score', 'edge_density', 'contrast', 
                                'brightness', 'sharpness', 'color_variance']].corr()
         
         plt.figure(figsize=(10, 8))
         sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0,
                    square=True, fmt='.3f')
-        plt.title('Image质量指标相关性热力图')
+        plt.title('Image Quality Metrics Correlation Heatmap')
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, 'correlation_heatmap.png'), 
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        # 4. HandleTime vs Detection分数
+        # 4. Processing time vs Detection score
         if 'processing_time' in df.columns and df['processing_time'].sum() > 0:
             plt.figure(figsize=(10, 6))
             plt.scatter(df['processing_time'], df['detection_score'], 
                        alpha=0.6, color='purple')
-            plt.xlabel('HandleTime (秒)')
-            plt.ylabel('Detection分数')
-            plt.title('HandleTime vs Detection分数')
+            plt.xlabel('Processing Time (seconds)')
+            plt.ylabel('Detection Score')
+            plt.title('Processing Time vs Detection Score')
             plt.grid(True, alpha=0.3)
             
-            # Add趋势Line
+            # Add trend line
             z = np.polyfit(df['processing_time'], df['detection_score'], 1)
             p = np.poly1d(z)
             plt.plot(df['processing_time'], p(df['processing_time']), 
-                    "r--", alpha=0.8, label=f'趋势Line (斜率: {z[0]:.3f})')
+                    "r--", alpha=0.8, label=f'Trend Line (slope: {z[0]:.3f})')
             plt.legend()
             
             plt.savefig(os.path.join(output_dir, 'processing_time_vs_score.png'), 
                        dpi=300, bbox_inches='tight')
             plt.close()
         
-        # 5. 滤波器Use频率
+        # 5. Filter usage frequency
         all_filters = []
         for result in self.results:
             all_filters.extend(result.applied_filters)
@@ -443,9 +443,9 @@ class ISPAnalyzer:
             
             plt.figure(figsize=(12, 6))
             filter_counts.plot(kind='bar', color='orange', alpha=0.7)
-            plt.xlabel('滤波器Type')
-            plt.ylabel('Use次数')
-            plt.title('滤波器Use频率')
+            plt.xlabel('Filter Type')
+            plt.ylabel('Usage Count')
+            plt.title('Filter Usage Frequency')
             plt.xticks(rotation=45, ha='right')
             plt.grid(True, alpha=0.3)
             plt.tight_layout()
@@ -454,25 +454,25 @@ class ISPAnalyzer:
             plt.close()
     
     def _create_text_report(self, df: pd.DataFrame, summary: pd.DataFrame, output_dir: str):
-        """CreateTextReport"""
+        """Create text report"""
         report_path = os.path.join(output_dir, 'performance_report.txt')
         
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write("=" * 60 + "\n")
-            f.write("ISPPerformanceAnalyzeReport\n")
+            f.write("ISP Performance Analysis Report\n")
             f.write("=" * 60 + "\n\n")
             
-            f.write(f"AnalyzeTime: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Analyze样本Number: {len(df)}\n\n")
+            f.write(f"Analysis Time: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Analysis Sample Count: {len(df)}\n\n")
             
-            f.write("1. DetectionPerformanceStatistics\n")
+            f.write("1. Detection Performance Statistics\n")
             f.write("-" * 30 + "\n")
-            f.write(f"AverageDetection分数: {df['detection_score'].mean():.4f}\n")
-            f.write(f"Detection分数Standard差: {df['detection_score'].std():.4f}\n")
-            f.write(f"最高Detection分数: {df['detection_score'].max():.4f}\n")
-            f.write(f"最低Detection分数: {df['detection_score'].min():.4f}\n\n")
+            f.write(f"Average Detection Score: {df['detection_score'].mean():.4f}\n")
+            f.write(f"Detection Score Standard Deviation: {df['detection_score'].std():.4f}\n")
+            f.write(f"Highest Detection Score: {df['detection_score'].max():.4f}\n")
+            f.write(f"Lowest Detection Score: {df['detection_score'].min():.4f}\n\n")
             
-            f.write("2. Image质量Statistics\n")
+            f.write("2. Image Quality Statistics\n")
             f.write("-" * 30 + "\n")
             quality_metrics = ['edge_density', 'contrast', 'brightness', 'sharpness', 'color_variance']
             for metric in quality_metrics:
@@ -481,14 +481,14 @@ class ISPAnalyzer:
                            f"{df[metric].mean():.4f} ± {df[metric].std():.4f}\n")
             f.write("\n")
             
-            f.write("3. PerformanceStatistics\n")
+            f.write("3. Performance Statistics\n")
             f.write("-" * 30 + "\n")
             if df['processing_time'].sum() > 0:
-                f.write(f"AverageHandleTime: {df['processing_time'].mean():.4f} 秒\n")
-                f.write(f"总HandleTime: {df['processing_time'].sum():.4f} 秒\n")
-            f.write(f"Average内存Use: {df['memory_usage'].mean():.2f} MB\n\n")
+                f.write(f"Average Processing Time: {df['processing_time'].mean():.4f} seconds\n")
+                f.write(f"Total Processing Time: {df['processing_time'].sum():.4f} seconds\n")
+            f.write(f"Average Memory Usage: {df['memory_usage'].mean():.2f} MB\n\n")
             
-            f.write("4. 滤波器UseStatistics\n")
+            f.write("4. Filter Usage Statistics\n")
             f.write("-" * 30 + "\n")
             all_filters = []
             for result in self.results:
@@ -497,64 +497,64 @@ class ISPAnalyzer:
             if all_filters:
                 filter_counts = pd.Series(all_filters).value_counts()
                 for filter_name, count in filter_counts.items():
-                    f.write(f"{filter_name}: {count} 次 ({count/len(all_filters)*100:.1f}%)\n")
+                    f.write(f"{filter_name}: {count} times ({count/len(all_filters)*100:.1f}%)\n")
             
-            f.write("\n5. DetailedStatistics摘要\n")
+            f.write("\n5. Detailed Statistics Summary\n")
             f.write("-" * 30 + "\n")
             f.write(summary.to_string())
             
             f.write("\n\n" + "=" * 60 + "\n")
-            f.write("ReportGenerateCompleted\n")
+            f.write("Report Generation Completed\n")
             f.write("=" * 60 + "\n")
     
     def create_comparison_visualization(self, baseline_results: List[ISPAnalysisResult],
                                       adaptive_results: List[ISPAnalysisResult],
                                       output_dir: str = "comparison_analysis"):
-        """CreateComparisonVisualization"""
+        """Create comparison visualization"""
         os.makedirs(output_dir, exist_ok=True)
         
-        # ExtractData
+        # Extract data
         baseline_scores = [r.detection.detection_score for r in baseline_results]
         adaptive_scores = [r.detection.detection_score for r in adaptive_results]
         
         baseline_times = [r.performance.processing_time for r in baseline_results]
         adaptive_times = [r.performance.processing_time for r in adaptive_results]
         
-        # CreateComparison图
+        # Create comparison charts
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
         
-        # 1. Detection分数Comparison
+        # 1. Detection score comparison
         x = range(len(baseline_scores))
         axes[0, 0].plot(x, baseline_scores, 'r-o', label='TraditionalISP', linewidth=2, markersize=6)
         axes[0, 0].plot(x, adaptive_scores, 'g-o', label='AdaptiveISP', linewidth=2, markersize=6)
-        axes[0, 0].set_xlabel('Image编号')
-        axes[0, 0].set_ylabel('Detection分数')
-        axes[0, 0].set_title('DetectionPerformanceComparison')
+        axes[0, 0].set_xlabel('Image Index')
+        axes[0, 0].set_ylabel('Detection Score')
+        axes[0, 0].set_title('Detection Performance Comparison')
         axes[0, 0].legend()
         axes[0, 0].grid(True, alpha=0.3)
         
-        # 2. PerformanceEnhance分布
+        # 2. Performance improvement distribution
         improvements = [(a - b) / b * 100 for a, b in zip(adaptive_scores, baseline_scores)]
         axes[0, 1].hist(improvements, bins=15, alpha=0.7, color='skyblue', edgecolor='black')
-        axes[0, 1].set_xlabel('PerformanceEnhance (%)')
-        axes[0, 1].set_ylabel('频次')
-        axes[0, 1].set_title('PerformanceEnhance分布')
+        axes[0, 1].set_xlabel('Performance Improvement (%)')
+        axes[0, 1].set_ylabel('Frequency')
+        axes[0, 1].set_title('Performance Improvement Distribution')
         axes[0, 1].grid(True, alpha=0.3)
         axes[0, 1].axvline(np.mean(improvements), color='red', linestyle='--', 
-                          label=f'AverageEnhance: {np.mean(improvements):.1f}%')
+                          label=f'Average Improvement: {np.mean(improvements):.1f}%')
         axes[0, 1].legend()
         
-        # 3. HandleTimeComparison
+        # 3. Processing time comparison
         axes[1, 0].plot(x, baseline_times, 'r-o', label='TraditionalISP', linewidth=2, markersize=6)
         axes[1, 0].plot(x, adaptive_times, 'g-o', label='AdaptiveISP', linewidth=2, markersize=6)
-        axes[1, 0].set_xlabel('Image编号')
-        axes[1, 0].set_ylabel('HandleTime (秒)')
-        axes[1, 0].set_title('HandleTimeComparison')
+        axes[1, 0].set_xlabel('Image Index')
+        axes[1, 0].set_ylabel('Processing Time (seconds)')
+        axes[1, 0].set_title('Processing Time Comparison')
         axes[1, 0].legend()
         axes[1, 0].grid(True, alpha=0.3)
         
-        # 4. 综合Performance雷达图
-        metrics = ['Detection分数', 'Edge密度', 'Comparison度', '锐度', '颜色方差']
+        # 4. Comprehensive performance radar chart
+        metrics = ['Detection Score', 'Edge Density', 'Contrast', 'Sharpness', 'Color Variance']
         baseline_values = [
             np.mean(baseline_scores),
             np.mean([r.image_quality.edge_density for r in baseline_results]),
@@ -570,14 +570,14 @@ class ISPAnalyzer:
             np.mean([r.image_quality.color_variance for r in adaptive_results])
         ]
         
-        # 归一化到0-1
+        # Normalize to 0-1
         max_vals = [max(b, a) for b, a in zip(baseline_values, adaptive_values)]
         baseline_norm = [b/m if m > 0 else 0 for b, m in zip(baseline_values, max_vals)]
         adaptive_norm = [a/m if m > 0 else 0 for a, m in zip(adaptive_values, max_vals)]
         
-        # Create雷达图
+        # Create radar chart
         angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
-        baseline_norm += baseline_norm[:1]  # 闭合图形
+        baseline_norm += baseline_norm[:1]  # Close the shape
         adaptive_norm += adaptive_norm[:1]
         angles += angles[:1]
         
@@ -589,7 +589,7 @@ class ISPAnalyzer:
         axes[1, 1].set_xticks(angles[:-1])
         axes[1, 1].set_xticklabels(metrics)
         axes[1, 1].set_ylim(0, 1)
-        axes[1, 1].set_title('综合PerformanceComparison')
+        axes[1, 1].set_title('Comprehensive Performance Comparison')
         axes[1, 1].legend()
         axes[1, 1].grid(True)
         
@@ -598,32 +598,33 @@ class ISPAnalyzer:
                    dpi=300, bbox_inches='tight')
         plt.close()
         
-        print(f"ComparisonAnalyze图已Save到: {output_dir}")
+        print(f"Comparison analysis charts saved to: {output_dir}")
 
 
 def main():
-    """主Function"""
-    parser = argparse.ArgumentParser(description='ISPPerformanceAnalyzeTool')
+    """Main function"""
+    parser = argparse.ArgumentParser(description='ISP Performance Analysis Tool')
     parser.add_argument('--input_dir', type=str, required=True,
-                       help='InputImageDirectory')
+                       help='Input image directory')
     parser.add_argument('--output_dir', type=str, default='performance_analysis',
-                       help='OutputAnalyzeResultDirectory')
+                       help='Output analysis result directory')
     parser.add_argument('--baseline_results', type=str, default=None,
-                       help='TraditionalISPResultJSONFile')
+                       help='Traditional ISP result JSON file')
     parser.add_argument('--adaptive_results', type=str, default=None,
-                       help='AdaptiveISPResultJSONFile')
+                       help='Adaptive ISP result JSON file')
     
     args = parser.parse_args()
     
-    print("启动ISPPerformanceAnalyzeTool...")
+    print("Starting ISP Performance Analysis Tool...")
     
     analyzer = ISPAnalyzer()
     
-    # 这里可以Add具Volume的Analyze逻辑
-    # 例如：LoadImage、RunISPHandle、AnalyzeResult等
+    # Here you can add specific analysis logic
+    # For example: Load images, run ISP processing, analyze results, etc.
     
-    print("PerformanceAnalyzeCompleted！")
+    print("Performance analysis completed!")
 
 
 if __name__ == "__main__":
     main()
+

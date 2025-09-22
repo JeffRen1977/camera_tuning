@@ -45,7 +45,7 @@ python chapter7_adaptive_isp_demo.py --input image_folder/ --batch --output batc
 
 ### 2. ISP pipeline demonstration (`isp_pipeline_demo.py`)
 
-提供了一个简化的、可编程的ISP流水线环境，用于教学和演示：
+Provides a simplified, programmable ISP pipeline environment for teaching and demonstration:
 
 ```python
 # Core modules
@@ -60,235 +60,235 @@ python chapter7_adaptive_isp_demo.py --input image_folder/ --batch --output batc
 - ColorCorrectionModule: Color correction
 ```
 
-**演示功能：**
-- 模块化ISP流水线设计
-- 参数动态调整
-- 处理效果可视化
-- 性能对比分析
+**Demo Features:**
+- Modular ISP pipeline design
+- Dynamic parameter adjustment
+- Processing effect visualization
+- Performance comparison analysis
 
-### 3. 交互式对比工具 (`isp_comparison_tool.py`)
+### 3. Interactive comparison tool (`isp_comparison_tool.py`)
 
-提供了一个图形化界面，用于实时对比传统ISP和自适应ISP的效果：
+Provides a graphical interface for real-time comparison of traditional ISP and adaptive ISP effects:
 
-**主要特性：**
-- 图像加载和预览
-- 实时参数调整
-- 自动性能评估
-- 结果保存和导出
+**Main Features:**
+- Image loading and preview
+- Real-time parameter adjustment
+- Automatic performance evaluation
+- Result saving and export
 
-**启动方法：**
+**Launch Method:**
 ```bash
 python isp_comparison_tool.py
 ```
 
-### 4. 性能分析工具 (`performance_analyzer.py`)
+### 4. Performance analysis tool (`performance_analyzer.py`)
 
-提供了全面的ISP性能评估功能：
+Provides comprehensive ISP performance evaluation functionality:
 
-**分析指标：**
-- 图像质量指标：PSNR、SSIM、边缘密度、对比度等
-- 检测性能指标：检测分数、置信度、检测数量等
-- 性能指标：处理时间、内存使用等
+**Analysis Metrics:**
+- Image quality metrics: PSNR, SSIM, edge density, contrast, etc.
+- Detection performance metrics: detection score, confidence, detection count, etc.
+- Performance metrics: processing time, memory usage, etc.
 
-**报告功能：**
-- 自动生成性能报告
-- 可视化图表生成
-- 统计分析摘要
+**Reporting Features:**
+- Automatic performance report generation
+- Visualization chart generation
+- Statistical analysis summary
 
-## 实际应用案例
+## Real-world Application Cases
 
-### 案例1：夜景拍摄优化
+### Case 1: Night scene shooting optimization
 
-**场景描述：** 在低光环境下拍摄，需要在降噪和保持细节之间找到平衡。
+**Scenario Description:** Shooting in low-light environments, requiring a balance between noise reduction and detail preservation.
 
-**传统ISP方法：**
-- 固定参数：Denoising强度0.3，Sharpening强度0.4
-- 结果：要么噪声太多，要么细节丢失
+**Traditional ISP Method:**
+- Fixed parameters: Denoising strength 0.3, Sharpening strength 0.4
+- Result: Either too much noise or loss of details
 
-**自适应ISP方法：**
-- AI分析图像特征：亮度、噪声水平、边缘密度
-- 动态调整：根据场景自动选择最优参数组合
-- 结果：在降噪的同时保持细节清晰
+**Adaptive ISP Method:**
+- AI analyzes image features: brightness, noise level, edge density
+- Dynamic adjustment: Automatically selects optimal parameter combinations based on scenarios
+- Result: Maintains detail clarity while reducing noise
 
-**性能提升：** 检测分数提升15-25%
+**Performance Improvement:** Detection score improvement of 15-25%
 
-### 案例2：目标检测应用优化
+### Case 2: Object detection application optimization
 
-**场景描述：** 自动驾驶场景中的车辆和行人检测。
+**Scenario Description:** Vehicle and pedestrian detection in autonomous driving scenarios.
 
-**传统ISP方法：**
-- 以视觉美观为目标调优
-- 固定流水线：曝光→White balance→Gamma→对比度→饱和度
+**Traditional ISP Method:**
+- Optimized for visual aesthetics
+- Fixed pipeline: Exposure → White balance → Gamma → Contrast → Saturation
 
-**自适应ISP方法：**
-- 以检测性能为目标
-- 动态流水线：根据图像内容自动选择需要的处理模块
-- 实时参数优化：每个处理步骤都针对检测任务优化
+**Adaptive ISP Method:**
+- Optimized for detection performance
+- Dynamic pipeline: Automatically selects required processing modules based on image content
+- Real-time parameter optimization: Each processing step optimized for detection tasks
 
-**性能提升：** mAP提升3-8%，处理效率提升20-30%
+**Performance Improvement:** mAP improvement of 3-8%, processing efficiency improvement of 20-30%
 
-### 案例3：多场景自适应
+### Case 3: Multi-scenario adaptation
 
-**场景描述：** 同一相机需要在不同光照条件下工作。
+**Scenario Description:** The same camera needs to work under different lighting conditions.
 
-**传统ISP方法：**
-- 需要预设多套参数
-- 场景切换时需要手动或半自动选择
-- 参数调优需要大量人工干预
+**Traditional ISP Method:**
+- Requires pre-setting multiple parameter sets
+- Manual or semi-automatic selection when switching scenarios
+- Parameter tuning requires extensive manual intervention
 
-**自适应ISP方法：**
-- 单套智能参数系统
-- 自动场景识别和参数调整
-- 持续学习和优化
+**Adaptive ISP Method:**
+- Single intelligent parameter system
+- Automatic scene recognition and parameter adjustment
+- Continuous learning and optimization
 
-**性能提升：** 整体适应性提升40-60%
+**Performance Improvement:** Overall adaptability improvement of 40-60%
 
-## 技术实现细节
+## Technical Implementation Details
 
-### 强化学习框架
+### Reinforcement Learning Framework
 
 ```python
 class Agent(nn.Module):
     def __init__(self, cfg, shape):
-        # 特征提取器
+        # Feature extractor
         self.feature_extractor = FeatureExtractor(...)
-        # ISP滤波器模块
+        # ISP filter modules
         self.filters = [ExposureFilter, GammaFilter, ...]
-        # 动作选择网络
+        # Action selection network
         self.action_selection = FeatureExtractor(...)
     
     def forward(self, image, noise, states):
-        # 1. 提取图像特征
+        # 1. Extract image features
         features = self.feature_extractor(image, states)
         
-        # 2. 为每个滤波器生成参数
+        # 2. Generate parameters for each filter
         filter_outputs = []
         for filter in self.filters:
             output = filter(image, features)
             filter_outputs.append(output)
         
-        # 3. 选择最优滤波器
+        # 3. Select optimal filter
         action_probs = self.action_selection(features)
         selected_filter = sample_action(action_probs)
         
-        # 4. 应用选中的滤波器
+        # 4. Apply selected filter
         result = apply_filter(image, selected_filter)
         
         return result, new_states, reward
 ```
 
-### 奖励函数设计
+### Reward Function Design
 
 ```python
 def calculate_reward(original_image, processed_image, detection_model):
-    # 1. 计算检测性能
+    # 1. Calculate detection performance
     original_detections = detection_model(original_image)
     processed_detections = detection_model(processed_image)
     
-    # 2. 计算性能提升
+    # 2. Calculate performance improvement
     detection_improvement = (processed_detections.mAP - 
                            original_detections.mAP) * 100
     
-    # 3. 计算质量惩罚
+    # 3. Calculate quality penalty
     quality_penalty = calculate_quality_penalty(processed_image)
     
-    # 4. 计算复杂度惩罚
+    # 4. Calculate complexity penalty
     complexity_penalty = calculate_complexity_penalty(applied_filters)
     
-    # 5. 综合奖励
+    # 5. Comprehensive reward
     reward = detection_improvement - quality_penalty - complexity_penalty
     
     return reward
 ```
 
-### 训练过程
+### Training Process
 
-1. **数据准备**：收集大量原始图像和目标检测标签
-2. **环境构建**：搭建可微分的ISP流水线
-3. **智能体训练**：使用PPO或A3C算法训练智能体
-4. **性能评估**：在验证集上评估检测性能
-5. **模型部署**：将训练好的模型部署到实际应用中
+1. **Data Preparation**: Collect large amounts of raw images and object detection labels
+2. **Environment Construction**: Build differentiable ISP pipeline
+3. **Agent Training**: Train agent using PPO or A3C algorithms
+4. **Performance Evaluation**: Evaluate detection performance on validation set
+5. **Model Deployment**: Deploy trained model to actual applications
 
-## 性能对比与分析
+## Performance Comparison and Analysis
 
-### 定量分析
+### Quantitative Analysis
 
-| 指标 | 传统ISP | 自适应ISP | 提升幅度 |
-|------|---------|-----------|----------|
-| 平均检测分数 | 0.742 | 0.851 | +14.7% |
-| 处理时间 | 45ms | 52ms | +15.6% |
-| 内存使用 | 128MB | 156MB | +21.9% |
-| 参数数量 | 固定 | 动态 | 自适应 |
-| 场景适应性 | 中等 | 优秀 | 显著提升 |
+| Metrics | Traditional ISP | Adaptive ISP | Improvement |
+|---------|----------------|--------------|-------------|
+| Average Detection Score | 0.742 | 0.851 | +14.7% |
+| Processing Time | 45ms | 52ms | +15.6% |
+| Memory Usage | 128MB | 156MB | +21.9% |
+| Parameter Count | Fixed | Dynamic | Adaptive |
+| Scenario Adaptability | Medium | Excellent | Significant Improvement |
 
-### 定性分析
+### Qualitative Analysis
 
-**优势：**
-1. **任务导向**：直接优化目标任务的性能，而不是主观的视觉质量
-2. **场景自适应**：能够根据不同的拍摄条件自动调整参数
-3. **效率优化**：只应用必要的处理模块，避免冗余计算
-4. **持续学习**：可以通过在线学习不断改进性能
+**Advantages:**
+1. **Task-oriented**: Directly optimizes target task performance rather than subjective visual quality
+2. **Scenario adaptive**: Automatically adjusts parameters based on different shooting conditions
+3. **Efficiency optimization**: Only applies necessary processing modules, avoiding redundant computation
+4. **Continuous learning**: Can continuously improve performance through online learning
 
-**挑战：**
-1. **计算复杂度**：需要额外的AI推理计算
-2. **训练数据**：需要大量高质量的标注数据
-3. **模型泛化**：需要确保在不同场景下的稳定性
-4. **实时性要求**：需要在实时性和性能之间找到平衡
+**Challenges:**
+1. **Computational complexity**: Requires additional AI inference computation
+2. **Training data**: Requires large amounts of high-quality labeled data
+3. **Model generalization**: Needs to ensure stability across different scenarios
+4. **Real-time requirements**: Must balance real-time performance and quality
 
-## 未来发展方向
+## Future Development Directions
 
-### 1. 硬件协同设计
+### 1. Hardware Co-design
 
-未来的ISP硬件设计应该更多地考虑与AI模型的协同：
-- 专用AI加速器集成
-- 内存带宽优化
-- 功耗平衡设计
+Future ISP hardware design should consider more collaboration with AI models:
+- Dedicated AI accelerator integration
+- Memory bandwidth optimization
+- Power consumption balance design
 
-### 2. 多任务优化
+### 2. Multi-task Optimization
 
-扩展AdaptiveISP到更多计算机视觉任务：
-- 语义分割
-- 深度估计
-- 图像分类
-- 人脸识别
+Extend AdaptiveISP to more computer vision tasks:
+- Semantic segmentation
+- Depth estimation
+- Image classification
+- Face recognition
 
-### 3. 边缘计算优化
+### 3. Edge Computing Optimization
 
-针对移动设备的特殊优化：
-- 模型压缩和量化
-- 推理加速
-- 功耗优化
+Special optimization for mobile devices:
+- Model compression and quantization
+- Inference acceleration
+- Power consumption optimization
 
-### 4. 在线学习
+### 4. Online Learning
 
-实现真正的自适应系统：
-- 增量学习
-- 在线参数更新
-- 用户反馈集成
+Implement truly adaptive systems:
+- Incremental learning
+- Online parameter updates
+- User feedback integration
 
-## 对读者的启发
+## Insights for Readers
 
-通过这个详细的案例分析和代码实现，读者可以深入理解：
+Through this detailed case analysis and code implementation, readers can gain deep understanding of:
 
-### 1. 范式转变
+### 1. Paradigm Shift
 
-AI调优不再依赖人工经验，而是直接以任务性能为导向，实现了从"看起来漂亮"到"用起来好用"的范式转变。
+AI tuning no longer relies on human experience but directly targets task performance, achieving a paradigm shift from "looking beautiful" to "working effectively."
 
-### 2. 实时适应性
+### 2. Real-time Adaptability
 
-这种方法能让ISP流水线根据不同场景动态调整参数，解决了传统固定ISP配置的局限性。
+This approach enables ISP pipelines to dynamically adjust parameters based on different scenarios, solving the limitations of traditional fixed ISP configurations.
 
-### 3. 硬件协同
+### 3. Hardware Collaboration
 
-ISP和AI模型的协同工作，是移动计算摄影未来的发展方向。ISP硬件的未来设计，应更多地考虑如何与AI模型高效集成。
+The collaborative work between ISP and AI models is the future direction of mobile computational photography. Future ISP hardware design should consider more efficient integration with AI models.
 
-### 4. 技术创新
+### 4. Technological Innovation
 
-这个案例展示了如何将深度学习、强化学习等前沿技术应用到传统的图像处理领域，推动整个行业的技术进步。
+This case demonstrates how to apply cutting-edge technologies like deep learning and reinforcement learning to traditional image processing fields, driving technological progress across the entire industry.
 
-## 运行指南
+## Running Guide
 
-### 环境要求
+### Environment Requirements
 
 ```bash
 # Python 3.8+
@@ -300,45 +300,45 @@ pip install pillow
 pip install tkinter  # 通常系统自带
 ```
 
-### 快速开始
+### Quick Start
 
-1. **运行主演示：**
+1. **Run main demo:**
 ```bash
 python chapter7_adaptive_isp_demo.py --input test_image.jpg
 ```
 
-2. **体验ISP流水线：**
+2. **Experience ISP pipeline:**
 ```bash
 python isp_pipeline_demo.py
 ```
 
-3. **使用交互式工具：**
+3. **Use interactive tool:**
 ```bash
 python isp_comparison_tool.py
 ```
 
-4. **性能分析：**
+4. **Performance analysis:**
 ```bash
 python performance_analyzer.py --input_dir images/ --output_dir analysis/
 ```
 
-### 自定义配置
+### Custom Configuration
 
-可以通过修改配置文件来调整：
-- ISP模块参数
-- 强化学习超参数
-- 评估指标权重
-- 可视化选项
+Can be adjusted by modifying configuration files:
+- ISP module parameters
+- Reinforcement learning hyperparameters
+- Evaluation metric weights
+- Visualization options
 
-## 总结
+## Summary
 
-AdaptiveISP代表了相机调优技术的重大突破，它通过AI自动化和任务导向的优化，实现了从传统的手工调优到智能自适应调优的转变。这个案例不仅展示了技术的先进性，更重要的是体现了计算摄影领域的发展趋势：硬件与软件的深度融合，传统算法与AI技术的有机结合。
+AdaptiveISP represents a major breakthrough in camera tuning technology. Through AI automation and task-oriented optimization, it achieves a transformation from traditional manual tuning to intelligent adaptive tuning. This case not only demonstrates technological advancement but more importantly reflects the development trends in computational photography: deep integration of hardware and software, and organic combination of traditional algorithms with AI technology.
 
-通过这个详细的案例分析，读者将能够：
-- 深入理解AI驱动的ISP调优原理
-- 掌握实际的代码实现和部署方法
-- 了解性能评估和优化的最佳实践
-- 获得对未来技术发展趋势的洞察
+Through this detailed case analysis, readers will be able to:
+- Deeply understand AI-driven ISP tuning principles
+- Master practical code implementation and deployment methods
+- Learn best practices for performance evaluation and optimization
+- Gain insights into future technological development trends
 
-这正是第7章想要传达的核心价值：技术不仅要有理论深度，更要有实践价值，让读者能够真正理解和应用这些前沿技术。
+This is exactly the core value that Chapter 7 wants to convey: technology must have both theoretical depth and practical value, enabling readers to truly understand and apply these cutting-edge technologies.
 
