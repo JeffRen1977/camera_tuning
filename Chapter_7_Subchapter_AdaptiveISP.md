@@ -28,7 +28,7 @@ AdaptiveISP addresses these challenges by transforming ISP tuning into a reinfor
 
 ### 2.1 System Architecture
 
-The AdaptiveISP system consists of four core components:
+The AdaptiveISP system consists of four core components working together to achieve intelligent ISP parameter optimization:
 
 ```python
 class AdaptiveISPDemo:
@@ -36,57 +36,463 @@ class AdaptiveISPDemo:
     
     def __init__(self, isp_weights_path=None, yolo_weights_path=None):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.isp_agent = None
-        self.detection_model = None
-        self.traditional_isp = TraditionalISP()
-        self.adaptive_isp = AdaptiveISP()
+        
+        # Initialize core components
+        self.isp_agent = None  # Reinforcement learning agent
+        self.detection_model = None  # YOLO detection model
+        self.traditional_isp = TraditionalISP()  # Baseline ISP
+        self.adaptive_isp = AdaptiveISP()  # AI-driven ISP
+        
+        # Initialize models
+        self._init_models(isp_weights_path, yolo_weights_path)
+        
+    def _init_models(self, isp_weights_path, yolo_weights_path):
+        """Initialize ISP and detection models"""
+        # Initialize AdaptiveISP agent
+        self.isp_agent = Agent(self.cfg, shape=(6 + self.filters_number, 64, 64))
+        
+        # Load pre-trained weights if provided
+        if isp_weights_path and os.path.exists(isp_weights_path):
+            checkpoint = torch.load(isp_weights_path, map_location=self.device)
+            self.isp_agent.load_state_dict(checkpoint['agent_model'])
+        
+        # Initialize YOLO detection model
+        self.yolo_model = self._load_yolo_model(yolo_weights_path)
 ```
 
-#### 2.1.1 Reinforcement Learning Agent
+#### 2.1.1 Reinforcement Learning Agent Architecture
 
-The core of AdaptiveISP is a deep reinforcement learning agent that learns to optimize ISP parameters:
+The core of AdaptiveISP is a sophisticated deep reinforcement learning agent that learns to optimize ISP parameters through interaction with the environment:
 
 ```python
 class Agent(nn.Module):
-    def __init__(self, cfg, shape):
-        # Feature extractor for image analysis
-        self.feature_extractor = FeatureExtractor(...)
-        # ISP filter modules
-        self.filters = [ExposureFilter, GammaFilter, DenoiseFilter, 
-                       SharpenFilter, ContrastFilter, SaturationFilter]
-        # Action selection network
-        self.action_selection = ActionSelectionNetwork(...)
+    """AdaptiveISP Reinforcement Learning Agent"""
     
-    def forward(self, image, noise, states):
-        # 1. Extract image features
-        features = self.feature_extractor(image, states)
+    def __init__(self, cfg, shape=(16, 64, 64), device='cuda'):
+        super(Agent, self).__init__()
+        self.cfg = cfg
         
-        # 2. Generate parameters for each filter
-        filter_outputs = []
-        for filter in self.filters:
-            output = filter(image, features)
-            filter_outputs.append(output)
+        # Feature extractor for image analysis
+        self.feature_extractor = FeatureExtractor(
+            shape=shape, 
+            mid_channels=cfg.base_channels,
+            output_dim=cfg.feature_extractor_dims,
+            dropout_prob=1.0 - cfg.dropout_keep_prob
+        )
         
-        # 3. Select optimal filter combination
-        action_probs = self.action_selection(features)
-        selected_filters = sample_action(action_probs)
+        # ISP filter modules - each filter is a neural network
+        self.filters = []
+        for filter_class in cfg.filters:
+            filter_instance = filter_class(cfg, predict=True).to(device)
+            self.__setattr__(filter_instance.get_short_name(), filter_instance)
+            self.filters.append(filter_instance)
         
-        # 4. Apply selected filters
-        result = apply_filters(image, selected_filters)
+        # Action selection network for filter choice
+        self.action_selection = FeatureExtractor(
+            shape=shape, 
+            mid_channels=cfg.base_channels,
+            output_dim=cfg.feature_extractor_dims,
+            dropout_prob=1.0 - cfg.dropout_keep_prob
+        )
         
-        return result, new_states, reward
+        # Fully connected layers for action probability
+        self.fc1 = nn.Linear(cfg.feature_extractor_dims, cfg.fc1_size)
+        self.lrelu = nn.LeakyReLU(negative_slope=0.2)
+        self.fc2 = nn.Linear(cfg.fc1_size, len(self.filters))
+        self.softmax = nn.Softmax()
+        
+        # Downsampling for computational efficiency
+        self.down_sample = nn.AdaptiveAvgPool2d((shape[1], shape[2]))
+    
+    def forward(self, inp, progress, high_res=None, selected_filter_id=None):
+        """Forward pass of the agent"""
+        train = 1 if self.training else 0
+        x, z, states = inp  # x: image, z: noise, states: current states
+        
+        # Extract noise for stochastic action selection
+        selection_noise = z[:, 0:1]
+        filtered_images = []
+        filter_debug_info = []
+        high_res_outputs = []
+        
+        # Downsample input for feature extraction
+        x_down = self.down_sample(x)
+        
+        # Extract features from enriched input (image + states)
+        if self.cfg.shared_feature_extractor:
+            filter_features = self.feature_extractor(
+                enrich_image_input(self.cfg, x_down, states)
+            )
+        
+        # Apply each filter and collect outputs
+        for i, filter_module in enumerate(self.filters):
+            if not self.cfg.shared_feature_extractor:
+                filter_features = self.feature_extractor(
+                    enrich_image_input(self.cfg, x_down, states)
+                )
+            
+            # Apply filter with learned parameters
+            filtered_img, debug_info = filter_module(
+                x, img_features=filter_features, high_res=high_res
+            )
+            
+            filtered_images.append(filtered_img)
+            filter_debug_info.append(debug_info)
+            
+            if high_res is not None and not filter_module.no_high_res():
+                high_res_out = filter_module(
+                    high_res, img_features=filter_features
+                )
+                high_res_outputs.append(high_res_out)
+        
+        # Action selection: choose which filter to apply
+        action_features = self.action_selection(
+            enrich_image_input(self.cfg, x_down, states)
+        )
+        action_logits = self.fc2(self.lrelu(self.fc1(action_features)))
+        action_probs = self.softmax(action_logits)
+        
+        # Sample action based on probabilities and noise
+        if selected_filter_id is None:
+            selected_filter_id = pdf_sample(action_probs, selection_noise)
+        
+        # Select the output from chosen filter
+        selected_output = self._select_filter_output(
+            filtered_images, selected_filter_id
+        )
+        
+        # Update states for next step
+        new_states = self._update_states(states, selected_filter_id, progress)
+        
+        return selected_output, new_states, {
+            'filter_outputs': filtered_images,
+            'action_probs': action_probs,
+            'selected_filter': selected_filter_id,
+            'debug_info': filter_debug_info
+        }
 ```
 
-#### 2.1.2 ISP Pipeline Modules
+#### 2.1.2 Feature Extractor Network
 
-The system implements a modular ISP pipeline with six core processing modules:
+The feature extractor is a convolutional neural network that analyzes image characteristics:
 
-1. **Exposure Enhancement**: Dynamic exposure adjustment based on scene brightness
-2. **Gamma Correction**: Adaptive gamma curves for optimal contrast
-3. **Denoising**: Intelligent noise reduction preserving image details
-4. **Sharpening**: Edge enhancement optimized for detection tasks
-5. **Contrast Enhancement**: Local and global contrast optimization
-6. **Saturation Adjustment**: Color enhancement for better object visibility
+```python
+class FeatureExtractor(torch.nn.Module):
+    """Convolutional feature extractor for image analysis"""
+    
+    def __init__(self, shape=(14, 64, 64), mid_channels=32, output_dim=4096, dropout_prob=0.5):
+        super(FeatureExtractor, self).__init__()
+        in_channels = shape[0]  # Input channels (RGB + states)
+        self.output_dim = output_dim
+        
+        # Build convolutional layers progressively
+        min_feature_map_size = 4
+        size = int(shape[2])  # Image size
+        size = size // 2
+        channels = mid_channels
+        layers = []
+        
+        # First convolutional layer
+        layers.append(nn.Conv2d(in_channels, channels, kernel_size=4, stride=2, padding=1))
+        layers.append(nn.BatchNorm2d(channels))
+        layers.append(nn.LeakyReLU(negative_slope=0.2))
+        
+        # Progressive downsampling layers
+        while size > min_feature_map_size:
+            in_channels = channels
+            if size == min_feature_map_size * 2:
+                channels = output_dim // (min_feature_map_size ** 2)
+            else:
+                channels *= 2
+            
+            size = size // 2
+            layers.append(nn.Conv2d(in_channels, channels, kernel_size=4, stride=2, padding=1))
+            layers.append(nn.BatchNorm2d(channels))
+            layers.append(nn.LeakyReLU(negative_slope=0.2))
+        
+        self.layers = nn.Sequential(*layers)
+        self.dropout = nn.Dropout(p=dropout_prob)
+    
+    def forward(self, x):
+        """Extract features from input image"""
+        x = self.layers(x)
+        x = torch.reshape(x, [-1, self.output_dim])
+        x = self.dropout(x)
+        return x
+```
+
+#### 2.1.3 ISP Filter Modules
+
+The system implements a sophisticated set of neural network-based ISP filters, each designed as a learnable module:
+
+```python
+class Filter(torch.nn.Module):
+    """Base class for all ISP filter modules"""
+    
+    def __init__(self, cfg, short_name, num_filter_parameters, predict=False):
+        super(Filter, self).__init__()
+        self.cfg = cfg
+        self.channels = 3
+        self.num_filter_parameters = num_filter_parameters
+        self.short_name = short_name
+        
+        if predict:
+            # Neural networks to predict filter parameters
+            output_dim = self.get_num_filter_parameters() + self.get_num_mask_parameters()
+            self.fc1 = nn.Linear(cfg.feature_extractor_dims, cfg.fc1_size)
+            self.lrelu = nn.LeakyReLU(negative_slope=0.2)
+            self.fc_filter = nn.Linear(cfg.fc1_size, self.get_num_filter_parameters())
+            self.fc_mask = nn.Linear(cfg.fc1_size, self.get_num_mask_parameters())
+        
+        self.predict = predict
+    
+    def extract_parameters(self, features):
+        """Extract filter parameters from image features"""
+        features = self.lrelu(self.fc1(features))
+        return self.fc_filter(features), self.fc_mask(features)
+    
+    def forward(self, img, img_features=None, specified_parameter=None, high_res=None):
+        """Apply filter with learned or specified parameters"""
+        if img_features is not None:
+            # Predict parameters from image features
+            filter_features, mask_parameters = self.extract_parameters(img_features)
+            filter_parameters = self.filter_param_regressor(filter_features)
+        else:
+            # Use specified parameters
+            filter_parameters = specified_parameter
+        
+        # Apply the actual image processing
+        filtered_img = self.process(img, filter_parameters)
+        
+        return filtered_img, {'parameters': filter_parameters}
+```
+
+##### Exposure Filter Implementation
+
+```python
+class ExposureFilter(Filter):
+    """Learnable exposure adjustment filter"""
+    
+    def __init__(self, cfg, predict=False):
+        super(ExposureFilter, self).__init__(cfg, 'E', 1, predict)
+        self.exposure_range = cfg.exposure_range
+    
+    def filter_param_regressor(self, features):
+        """Convert features to exposure parameters"""
+        # Map features to exposure range [-exposure_range, +exposure_range]
+        return tanh_range(-self.exposure_range, self.exposure_range)(features)
+    
+    def process(self, img, param):
+        """Apply exposure adjustment"""
+        # Exposure adjustment: multiply by 2^exposure_value
+        exposure_multiplier = torch.pow(2.0, param.view(-1, 1, 1, 1))
+        adjusted_img = img * exposure_multiplier
+        return torch.clamp(adjusted_img, 0.0, 1.0)
+```
+
+##### Gamma Correction Filter
+
+```python
+class GammaFilter(Filter):
+    """Learnable gamma correction filter"""
+    
+    def __init__(self, cfg, predict=False):
+        super(GammaFilter, self).__init__(cfg, 'G', 1, predict)
+        self.gamma_range = cfg.gamma_range
+    
+    def filter_param_regressor(self, features):
+        """Convert features to gamma parameters"""
+        # Map to gamma range [1/gamma_range, gamma_range]
+        return tanh_range(1.0/self.gamma_range, self.gamma_range, initial=1.0)(features)
+    
+    def process(self, img, param):
+        """Apply gamma correction"""
+        gamma_corrected = torch.pow(
+            torch.clamp(img, min=0.001, max=1.0), 
+            param.view(-1, 1, 1, 1)
+        )
+        return torch.clamp(gamma_corrected, 0.0, 1.0)
+```
+
+##### Denoising Filter with Non-Local Means
+
+```python
+class DenoiseFilter(Filter):
+    """Learnable denoising filter using Non-Local Means"""
+    
+    def __init__(self, cfg, predict=False):
+        super(DenoiseFilter, self).__init__(cfg, 'NLM', 1, predict)
+        self.denoise_range = cfg.denoise_range
+        self.nlm_processor = NonLocalMeans()
+    
+    def filter_param_regressor(self, features):
+        """Convert features to denoising strength"""
+        return tanh_range(self.denoise_range[0], self.denoise_range[1])(features)
+    
+    def process(self, img, param):
+        """Apply non-local means denoising"""
+        batch_size = img.shape[0]
+        denoised_imgs = []
+        
+        for i in range(batch_size):
+            # Convert to numpy for OpenCV processing
+            img_np = img[i].permute(1, 2, 0).cpu().numpy()
+            strength = param[i].item()
+            
+            # Apply Non-Local Means denoising
+            if strength > 0.01:
+                denoised_np = self.nlm_processor.denoise(img_np, strength)
+            else:
+                denoised_np = img_np
+            
+            # Convert back to tensor
+            denoised_tensor = torch.from_numpy(denoised_np).permute(2, 0, 1)
+            denoised_imgs.append(denoised_tensor)
+        
+        return torch.stack(denoised_imgs).to(img.device)
+```
+
+##### Sharpening Filter
+
+```python
+class SharpenFilter(Filter):
+    """Learnable sharpening filter"""
+    
+    def __init__(self, cfg, predict=False):
+        super(SharpenFilter, self).__init__(cfg, 'Shr', 1, predict)
+        self.sharpen_range = cfg.sharpen_range
+    
+    def filter_param_regressor(self, features):
+        """Convert features to sharpening strength"""
+        return tanh_range(self.sharpen_range[0], self.sharpen_range[1])(features)
+    
+    def process(self, img, param):
+        """Apply unsharp mask sharpening"""
+        batch_size = img.shape[0]
+        sharpened_imgs = []
+        
+        for i in range(batch_size):
+            img_np = img[i].permute(1, 2, 0).cpu().numpy()
+            strength = param[i].item()
+            
+            # Apply unsharp mask
+            if strength > 0.01:
+                sharpened_np = unsharp_mask(img_np, strength)
+            else:
+                sharpened_np = img_np
+            
+            sharpened_tensor = torch.from_numpy(sharpened_np).permute(2, 0, 1)
+            sharpened_imgs.append(sharpened_tensor)
+        
+        return torch.stack(sharpened_imgs).to(img.device)
+```
+
+##### Contrast Enhancement Filter
+
+```python
+class ContrastFilter(Filter):
+    """Learnable contrast enhancement filter"""
+    
+    def __init__(self, cfg, predict=False):
+        super(ContrastFilter, self).__init__(cfg, 'Ct', 1, predict)
+        self.contrast_range = (0.5, 2.0)
+    
+    def filter_param_regressor(self, features):
+        """Convert features to contrast parameters"""
+        return tanh_range(self.contrast_range[0], self.contrast_range[1], initial=1.0)(features)
+    
+    def process(self, img, param):
+        """Apply contrast adjustment"""
+        # Convert to grayscale for mean calculation
+        gray = 0.299 * img[:, 0:1, :, :] + 0.587 * img[:, 1:2, :, :] + 0.114 * img[:, 2:3, :, :]
+        mean_intensity = torch.mean(gray, dim=(2, 3), keepdim=True)
+        
+        # Apply contrast adjustment
+        contrast_adjusted = (img - mean_intensity) * param.view(-1, 1, 1, 1) + mean_intensity
+        return torch.clamp(contrast_adjusted, 0.0, 1.0)
+```
+
+##### Saturation Enhancement Filter
+
+```python
+class SaturationPlusFilter(Filter):
+    """Learnable saturation enhancement filter"""
+    
+    def __init__(self, cfg, predict=False):
+        super(SaturationPlusFilter, self).__init__(cfg, 'S+', 1, predict)
+        self.saturation_range = (0.0, 2.0)
+    
+    def filter_param_regressor(self, features):
+        """Convert features to saturation parameters"""
+        return tanh_range(self.saturation_range[0], self.saturation_range[1], initial=1.0)(features)
+    
+    def process(self, img, param):
+        """Apply saturation enhancement"""
+        # Convert RGB to HSV
+        img_hsv = self.rgb_to_hsv(img)
+        
+        # Enhance saturation
+        img_hsv[:, 1:2, :, :] = img_hsv[:, 1:2, :, :] * param.view(-1, 1, 1, 1)
+        img_hsv[:, 1:2, :, :] = torch.clamp(img_hsv[:, 1:2, :, :], 0.0, 1.0)
+        
+        # Convert back to RGB
+        enhanced_img = self.hsv_to_rgb(img_hsv)
+        return torch.clamp(enhanced_img, 0.0, 1.0)
+    
+    def rgb_to_hsv(self, rgb):
+        """Convert RGB to HSV color space"""
+        # Implementation of RGB to HSV conversion
+        # (Detailed implementation omitted for brevity)
+        pass
+    
+    def hsv_to_rgb(self, hsv):
+        """Convert HSV to RGB color space"""
+        # Implementation of HSV to RGB conversion
+        # (Detailed implementation omitted for brevity)
+        pass
+```
+
+#### 2.1.4 Configuration and Filter Selection
+
+The system configuration defines which filters are available and their parameter ranges:
+
+```python
+# Configuration for AdaptiveISP filters
+cfg = Dict()
+
+# Available ISP filters in processing order
+cfg.filters = [
+    ExposureFilter,      # Exposure adjustment
+    GammaFilter,         # Gamma correction  
+    CCMFilter,           # Color correction matrix
+    SharpenFilter,       # Sharpening
+    DenoiseFilter,       # Denoising
+    ToneFilter,          # Tone mapping
+    ContrastFilter,      # Contrast enhancement
+    SaturationPlusFilter, # Saturation enhancement
+    WNBFilter,           # White balance
+    ImprovedWhiteBalanceFilter  # Advanced white balance
+]
+
+# Parameter ranges for each filter
+cfg.gamma_range = 3.0
+cfg.exposure_range = 3.5
+cfg.wb_range = 1.1
+cfg.sharpen_range = (0.0, 10.0)
+cfg.denoise_range = (0.0, 1.0)
+cfg.ccm_range = (-2.0, 2.0)
+
+# Neural network architecture parameters
+cfg.base_channels = 32
+cfg.feature_extractor_dims = 4096
+cfg.fc1_size = 512
+cfg.dropout_keep_prob = 0.5
+
+# Training parameters
+cfg.learning_rate = 1e-4
+cfg.discount_factor = 0.98
+cfg.entropy_regularization = 0.01
+```
 
 ### 2.2 Reward Function Design
 
@@ -287,15 +693,25 @@ venv/bin/python performance_analyzer.py --input_dir test_data --output_dir analy
 python adaptive_isp_demo.py \
     --input test_data/876.png \
     --output results \
-    --device cpu \
-    --batch_size 1
+    --isp_weights path/to/isp_weights.pth \
+    --yolo_weights path/to/yolo_weights.pt
+
+# Batch processing mode
+python adaptive_isp_demo.py \
+    --input test_data/ \
+    --output batch_results \
+    --batch
+
+# Create test image if needed
+python adaptive_isp_demo.py \
+    --input test_image.png \
+    --output results \
+    --create_test
 
 # Performance analysis with custom settings
 python performance_analyzer.py \
     --input_dir test_data \
-    --output_dir performance_results \
-    --baseline_results baseline.json \
-    --adaptive_results adaptive.json
+    --output_dir performance_results
 ```
 
 ### 4.3 Expected Output
